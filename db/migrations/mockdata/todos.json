@@ -1,0 +1,44 @@
+[
+  {
+    "id": "665000000000000000000101",
+    "title": "Review clean architecture layers",
+    "description": "Walk through domain, usecase, repository, controller, and route packages.",
+    "completed": false,
+    "created_at": "2026-05-12T02:00:00Z",
+    "updated_at": "2026-05-12T02:00:00Z"
+  },
+  {
+    "id": "665000000000000000000102",
+    "title": "Configure MongoDB Atlas connection",
+    "description": "Create a database user, allow the local IP address, and copy the connection string into .env.",
+    "completed": true,
+    "created_at": "2026-05-12T02:10:00Z",
+    "updated_at": "2026-05-12T02:35:00Z",
+    "completed_at": "2026-05-12T02:35:00Z"
+  },
+  {
+    "id": "665000000000000000000103",
+    "title": "Run todo API locally",
+    "description": "Start the API with go run ./cmd and call the health endpoint.",
+    "completed": false,
+    "created_at": "2026-05-12T02:20:00Z",
+    "updated_at": "2026-05-12T02:20:00Z"
+  },
+  {
+    "id": "665000000000000000000104",
+    "title": "Add request logging",
+    "description": "Check storage/logs after making API requests.",
+    "completed": true,
+    "created_at": "2026-05-12T02:30:00Z",
+    "updated_at": "2026-05-12T03:00:00Z",
+    "completed_at": "2026-05-12T03:00:00Z"
+  },
+  {
+    "id": "665000000000000000000105",
+    "title": "Write first usecase tests",
+    "description": "Mock the repository interface and verify create, update, and delete behavior.",
+    "completed": false,
+    "created_at": "2026-05-12T02:40:00Z",
+    "updated_at": "2026-05-12T02:40:00Z"
+  }
+]

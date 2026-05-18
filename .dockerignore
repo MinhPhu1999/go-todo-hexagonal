@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+*.env
+development.yaml
+
+storage/logs/*
+!storage/logs/.gitignore
+
+bin/
+out/
+server
+migrate
+coverage.out
+cover.out

@@ -1,0 +1,10 @@
+.env
+development.yaml
+storage/logs/*
+!storage/logs/.gitignore
+out/
+bin/
+server
+migrate
+coverage.out
+cover.out
