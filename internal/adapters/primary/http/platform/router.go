@@ -44,6 +44,10 @@ func (h *PlatformHandler) Router() *gin.RouterGroup {
 	return h.router
 }
 
+func (h *PlatformHandler) Engine() *gin.Engine {
+	return h.engine
+}
+
 func (h *PlatformHandler) RegisterRoutes(router *gin.RouterGroup) *gin.RouterGroup {
 	router.POST("/auth/register", h.Register)
 	router.POST("/auth/login", h.Login)
