@@ -53,9 +53,7 @@ LOG_TO_STDOUT=true
 
 MONGODB_URI=mongodb://localhost:27017
 DB_NAME=todo_app
-TODO_COLLECTION=todos
-USER_COLLECTION=users
-MONGODB_CONNECT_TIMEOUT=10s
+CONNECT_TIMEOUT=10s
 
 JWT_SECRET=dev-secret-with-at-least-16-chars
 JWT_ISSUER=go-crud-db-p2

@@ -20,6 +20,13 @@ func (h *PlatformHandler) CreateTodo(ctx *gin.Context) {
 		return
 	}
 
+	userID, ok := authUserID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, response.Error("UNAUTHORIZED", "user not authenticated"))
+		return
+	}
+	request.UserID = domain.UserID(userID)
+
 	todo, err := h.todoSvc.Create(ctx.Request.Context(), request)
 	if err != nil {
 		handleTodoError(ctx, err)
@@ -36,6 +43,13 @@ func (h *PlatformHandler) FetchTodos(ctx *gin.Context) {
 		return
 	}
 
+	userID, ok := authUserID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, response.Error("UNAUTHORIZED", "user not authenticated"))
+		return
+	}
+	request.UserID = domain.UserID(userID)
+
 	todoList, err := h.todoSvc.Fetch(ctx.Request.Context(), request)
 	if err != nil {
 		handleTodoError(ctx, err)
@@ -51,7 +65,13 @@ func (h *PlatformHandler) FetchTodos(ctx *gin.Context) {
 }
 
 func (h *PlatformHandler) GetTodo(ctx *gin.Context) {
-	todo, err := h.todoSvc.GetByID(ctx.Request.Context(), ctx.Param("id"))
+	userID, ok := authUserID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, response.Error("UNAUTHORIZED", "user not authenticated"))
+		return
+	}
+
+	todo, err := h.todoSvc.GetByID(ctx.Request.Context(), ctx.Param("id"), domain.UserID(userID))
 	if err != nil {
 		handleTodoError(ctx, err)
 		return
@@ -67,7 +87,13 @@ func (h *PlatformHandler) UpdateTodo(ctx *gin.Context) {
 		return
 	}
 
-	todo, err := h.todoSvc.Update(ctx.Request.Context(), ctx.Param("id"), request)
+	userID, ok := authUserID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, response.Error("UNAUTHORIZED", "user not authenticated"))
+		return
+	}
+
+	todo, err := h.todoSvc.Update(ctx.Request.Context(), ctx.Param("id"), request, domain.UserID(userID))
 	if err != nil {
 		handleTodoError(ctx, err)
 		return
@@ -77,7 +103,13 @@ func (h *PlatformHandler) UpdateTodo(ctx *gin.Context) {
 }
 
 func (h *PlatformHandler) DeleteTodo(ctx *gin.Context) {
-	if err := h.todoSvc.Delete(ctx.Request.Context(), ctx.Param("id")); err != nil {
+	userID, ok := authUserID(ctx)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, response.Error("UNAUTHORIZED", "user not authenticated"))
+		return
+	}
+
+	if err := h.todoSvc.Delete(ctx.Request.Context(), ctx.Param("id"), domain.UserID(userID)); err != nil {
 		handleTodoError(ctx, err)
 		return
 	}

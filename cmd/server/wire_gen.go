@@ -8,114 +8,64 @@ package main
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
 	"go-crud-db-p2/config"
+	"go-crud-db-p2/internal"
 	"go-crud-db-p2/internal/adapters/primary/http/platform"
 	platform2 "go-crud-db-p2/internal/adapters/secondary/mongo/platform"
+	platform4 "go-crud-db-p2/internal/adapters/secondary/postgres/platform"
 	"go-crud-db-p2/internal/adapters/security"
 	platform3 "go-crud-db-p2/internal/core/services/platform"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"net/http"
-	"time"
 )
 
 // Injectors from wire.go:
 
-func InitializeApp(ctx context.Context, cfg config.Config) (*platform.PlatformHandler, error) {
+func InitializeMongoApp(ctx context.Context, cfg config.Config) (*platform.PlatformHandler, error) {
 	engine := provideGinEngine(cfg)
 	routerGroup := provideGinRouterGroup(engine)
 	database, err := provideMongoDatabase(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	userCollectionName := provideUserCollectionName(cfg)
-	userRepository := platform2.NewUserRepository(database, userCollectionName)
-	duration := provideContextTimeout(cfg)
+	userRepository := platform2.NewUserRepository(database)
 	objectIDGenerator := platform2.NewObjectIDGenerator()
 	bcryptPasswordHasher := security.NewBcryptPasswordHasher()
-	jwtSecret := provideJWTSecret(cfg)
-	jwtIssuer := provideJWTIssuer(cfg)
-	jwtExpiresIn := provideJWTExpiresIn(cfg)
-	jwtManager := security.NewJWTManager(jwtSecret, jwtIssuer, jwtExpiresIn)
-	googleConfig := provideGoogleConfig(cfg)
-	googleOAuth := security.NewGoogleOAuth(googleConfig)
-	googleStateTTL := provideGoogleStateTTL(cfg)
-	memoryStateStore := security.NewMemoryStateStore(googleStateTTL)
+	jwtManager := security.NewJWTManager(cfg)
+	googleOAuth := security.NewGoogleOAuth(cfg)
+	memoryStateStore := security.NewMemoryStateStore(cfg)
 	systemClock := platform3.NewSystemClock()
-	authService := platform3.NewAuthService(userRepository, duration, objectIDGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock)
-	todoCollectionName := provideTodoCollectionName(cfg)
-	todoRepository := platform2.NewTodoRepository(database, todoCollectionName)
-	todoService := platform3.NewTodoService(todoRepository, duration, objectIDGenerator, systemClock)
+	authService := platform3.NewAuthService(userRepository, cfg, objectIDGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock)
+	todoRepository := platform2.NewTodoRepository(database)
+	todoService := platform3.NewTodoService(todoRepository, cfg, objectIDGenerator, systemClock)
+	platformHandler := platform.NewPlatformHandler(routerGroup, engine, authService, todoService, jwtManager)
+	return platformHandler, nil
+}
+
+func InitializePostgresApp(ctx context.Context, cfg config.Config) (*platform.PlatformHandler, error) {
+	engine := provideGinEngine(cfg)
+	routerGroup := provideGinRouterGroup(engine)
+	pool, err := providePostgresPool(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	userRepository := platform4.NewUserRepository(pool)
+	uuidGenerator := platform4.NewUUIDGenerator()
+	bcryptPasswordHasher := security.NewBcryptPasswordHasher()
+	jwtManager := security.NewJWTManager(cfg)
+	googleOAuth := security.NewGoogleOAuth(cfg)
+	memoryStateStore := security.NewMemoryStateStore(cfg)
+	systemClock := platform3.NewSystemClock()
+	authService := platform3.NewAuthService(userRepository, cfg, uuidGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock)
+	todoRepository := platform4.NewTodoRepository(pool)
+	todoService := platform3.NewTodoService(todoRepository, cfg, uuidGenerator, systemClock)
 	platformHandler := platform.NewPlatformHandler(routerGroup, engine, authService, todoService, jwtManager)
 	return platformHandler, nil
 }
 
 // wire.go:
 
-func provideGinEngine(cfg config.Config) *gin.Engine {
-	gin.SetMode(cfg.GinMode)
-	engine := gin.New()
-	engine.Use(corsMiddleware())
-	return engine
-}
-
-func provideGinRouterGroup(engine *gin.Engine) *gin.RouterGroup {
-	return engine.Group("/api/v1")
-}
-
-func provideMongoDatabase(ctx context.Context, cfg config.Config) (*mongo.Database, error) {
-	client, err := platform2.Connect(ctx, cfg.Database.URI)
-	if err != nil {
-		return nil, err
-	}
-	return client.Database(cfg.Database.Name), nil
-}
-
-func provideTodoCollectionName(cfg config.Config) config.TodoCollectionName {
-	return config.TodoCollectionName(cfg.Database.TodoCollection)
-}
-
-func provideUserCollectionName(cfg config.Config) config.UserCollectionName {
-	return config.UserCollectionName(cfg.Database.UserCollection)
-}
-
-func provideJWTSecret(cfg config.Config) config.JWTSecret {
-	return config.JWTSecret(cfg.JWT.Secret)
-}
-
-func provideJWTIssuer(cfg config.Config) config.JWTIssuer {
-	return config.JWTIssuer(cfg.JWT.Issuer)
-}
-
-func provideJWTExpiresIn(cfg config.Config) config.JWTExpiresIn {
-	return config.JWTExpiresIn(cfg.JWT.ExpiresIn)
-}
-
-func provideGoogleConfig(cfg config.Config) config.GoogleConfig {
-	return cfg.Google
-}
-
-func provideGoogleStateTTL(cfg config.Config) config.GoogleStateTTL {
-	return config.GoogleStateTTL(cfg.Google.StateTTL)
-}
-
-func provideContextTimeout(cfg config.Config) time.Duration {
-	return cfg.Context.Timeout
-}
-
-func corsMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ctx.Header("Access-Control-Allow-Origin", "*")
-		ctx.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		ctx.Header("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-Requested-With")
-		ctx.Header("Access-Control-Allow-Credentials", "true")
-		ctx.Header("Access-Control-Max-Age", "86400")
-
-		if ctx.Request.Method == http.MethodOptions {
-			ctx.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		ctx.Next()
-	}
-}
+// Tập hợp tầng giao tiếp và nghiệp vụ dùng chung
+var CoreAppSet = wire.NewSet(
+	provideGinEngine,
+	provideGinRouterGroup, internal.ServiceSet, internal.HandlerSet,
+)

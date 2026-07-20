@@ -9,9 +9,9 @@ import (
 type ITodoService interface {
 	Create(ctx context.Context, request domain.CreateTodoRequest) (*domain.Todo, error)
 	Fetch(ctx context.Context, request domain.FetchTodosRequest) (*domain.TodoList, error)
-	GetByID(ctx context.Context, id string) (*domain.Todo, error)
-	Update(ctx context.Context, id string, request domain.UpdateTodoRequest) (*domain.Todo, error)
-	Delete(ctx context.Context, id string) error
+	GetByID(ctx context.Context, id string, userID domain.UserID) (*domain.Todo, error)
+	Update(ctx context.Context, id string, request domain.UpdateTodoRequest, userID domain.UserID) (*domain.Todo, error)
+	Delete(ctx context.Context, id string, userID domain.UserID) error
 }
 
 type IAuthService interface {

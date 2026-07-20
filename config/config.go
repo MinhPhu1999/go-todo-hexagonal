@@ -26,14 +26,7 @@ type Config struct {
 	Log      LogConfig      `mapstructure:"log" json:"log"`
 }
 
-type (
-	TodoCollectionName string
-	UserCollectionName string
-	JWTSecret          string
-	JWTIssuer          string
-	JWTExpiresIn       time.Duration
-	GoogleStateTTL     time.Duration
-)
+
 
 type ServerConfig struct {
 	Address         string        `mapstructure:"address" json:"address"`
@@ -63,11 +56,11 @@ type ContextConfig struct {
 }
 
 type DatabaseConfig struct {
+	Driver         string        `mapstructure:"driver" json:"driver"`
 	URI            string        `mapstructure:"uri" json:"uri"`
 	Name           string        `mapstructure:"name" json:"name"`
-	TodoCollection string        `mapstructure:"todo_collection" json:"todo_collection"`
-	UserCollection string        `mapstructure:"user_collection" json:"user_collection"`
 	ConnectTimeout time.Duration `mapstructure:"connect_timeout" json:"connect_timeout"`
+	PostgresDSN    string        `mapstructure:"postgres_dsn" json:"postgres_dsn"`
 }
 
 type JWTConfig struct {
@@ -110,11 +103,11 @@ var envBindings = []envBinding{
 
 	bind("context.timeout", "CONTEXT_TIMEOUT"),
 
+	bind("database.driver", "DB_DRIVER"),
 	bind("database.uri", "MONGODB_URI"),
 	bind("database.name", "DB_NAME"),
-	bind("database.todo_collection", "TODO_COLLECTION"),
-	bind("database.user_collection", "USER_COLLECTION"),
-	bind("database.connect_timeout", "MONGODB_CONNECT_TIMEOUT"),
+	bind("database.connect_timeout", "CONNECT_TIMEOUT"),
+	bind("database.postgres_dsn", "POSTGRES_DSN"),
 
 	bind("jwt.secret", "JWT_SECRET"),
 	bind("jwt.issuer", "JWT_ISSUER"),
@@ -221,11 +214,11 @@ func setDefaults() {
 	viper.SetDefault("server.idle_timeout", "1m")
 	viper.SetDefault("server.shutdown_timeout", "10s")
 	viper.SetDefault("context.timeout", "2s")
+	viper.SetDefault("database.driver", "mongo")
 	viper.SetDefault("database.uri", "mongodb://localhost:27017")
 	viper.SetDefault("database.name", "todo_app")
-	viper.SetDefault("database.todo_collection", "todos")
-	viper.SetDefault("database.user_collection", "users")
 	viper.SetDefault("database.connect_timeout", "10s")
+	viper.SetDefault("database.postgres_dsn", "postgres://postgres@localhost:5432/postgres?sslmode=disable")
 	viper.SetDefault("jwt.issuer", "go-crud-db-p2")
 	viper.SetDefault("jwt.expires_in", "24h")
 	viper.SetDefault("google.redirect_url", "http://localhost:8080/api/v1/auth/google/callback")

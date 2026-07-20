@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"go-crud-db-p2/config"
 	domain "go-crud-db-p2/internal/core/domain/platform"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -18,9 +17,9 @@ type UserRepository struct {
 	collection *mongo.Collection
 }
 
-func NewUserRepository(database *mongo.Database, collection config.UserCollectionName) *UserRepository {
+func NewUserRepository(database *mongo.Database) *UserRepository {
 	return &UserRepository{
-		collection: database.Collection(string(collection)),
+		collection: database.Collection("users"),
 	}
 }
 

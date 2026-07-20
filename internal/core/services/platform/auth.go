@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"go-crud-db-p2/config"
 	domain "go-crud-db-p2/internal/core/domain/platform"
 	ports "go-crud-db-p2/internal/core/ports/platform"
 )
@@ -22,7 +23,7 @@ type AuthService struct {
 
 func NewAuthService(
 	userRepository ports.IUserRepository,
-	timeout time.Duration,
+	cfg config.Config,
 	idGenerator ports.IUserIDGenerator,
 	passwords ports.IPasswordHasher,
 	tokens ports.ITokenProvider,
@@ -32,7 +33,7 @@ func NewAuthService(
 ) *AuthService {
 	return &AuthService{
 		userRepository: userRepository,
-		contextTimeout: timeout,
+		contextTimeout: cfg.Context.Timeout,
 		idGenerator:    idGenerator,
 		passwords:      passwords,
 		tokens:         tokens,

@@ -32,9 +32,7 @@ func TestLoadConfigReadsDotEnvFile(t *testing.T) {
 	if cfg.Database.URI != "mongodb://dot-env:27017" {
 		t.Fatalf("Database.URI = %q, want %q", cfg.Database.URI, "mongodb://dot-env:27017")
 	}
-	if cfg.Database.TodoCollection != "dot_env_todos" {
-		t.Fatalf("Database.TodoCollection = %q, want %q", cfg.Database.TodoCollection, "dot_env_todos")
-	}
+
 	if cfg.Server.ReadTimeout != 17*time.Second {
 		t.Fatalf("Server.ReadTimeout = %s, want 17s", cfg.Server.ReadTimeout)
 	}

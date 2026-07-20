@@ -17,12 +17,13 @@ type MemoryStateStore struct {
 	byteCount int
 }
 
-func NewMemoryStateStore(ttl config.GoogleStateTTL) *MemoryStateStore {
+func NewMemoryStateStore(cfg config.Config) *MemoryStateStore {
+	ttl := cfg.Google.StateTTL
 	if ttl <= 0 {
-		ttl = config.GoogleStateTTL(10 * time.Minute)
+		ttl = 10 * time.Minute
 	}
 	return &MemoryStateStore{
-		ttl:       time.Duration(ttl),
+		ttl:       ttl,
 		states:    make(map[string]time.Time),
 		now:       time.Now,
 		byteCount: 32,

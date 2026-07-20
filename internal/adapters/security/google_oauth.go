@@ -24,12 +24,12 @@ type GoogleOAuth struct {
 	client *http.Client
 }
 
-func NewGoogleOAuth(config config.GoogleConfig) *GoogleOAuth {
+func NewGoogleOAuth(cfg config.Config) *GoogleOAuth {
 	return &GoogleOAuth{
 		config: &oauth2.Config{
-			ClientID:     strings.TrimSpace(config.ClientID),
-			ClientSecret: strings.TrimSpace(config.ClientSecret),
-			RedirectURL:  strings.TrimSpace(config.RedirectURL),
+			ClientID:     strings.TrimSpace(cfg.Google.ClientID),
+			ClientSecret: strings.TrimSpace(cfg.Google.ClientSecret),
+			RedirectURL:  strings.TrimSpace(cfg.Google.RedirectURL),
 			Scopes:       []string{"openid", "email", "profile"},
 			Endpoint:     google.Endpoint,
 		},

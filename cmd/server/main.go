@@ -2,27 +2,43 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"go-crud-db-p2/config"
+	"go-crud-db-p2/pkg/logger"
 )
 
 func main() {
 	cfg, err := config.LoadConfig(".", "")
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
+
+	logger, err := logger.New(logger.Config{
+		Format:    cfg.Log.Format,
+		FilePath:  cfg.Log.FilePath,
+		Level:     cfg.Log.Level,
+		ToStdout:  cfg.Log.ToStdout,
+		AddSource: cfg.Log.AddSource,
+	})
+	if err != nil {
+		slog.Error("failed to initialize logger", "error", err)
+		os.Exit(1)
+	}
+	defer logger.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Database.ConnectTimeout)
 	defer cancel()
 
-	handler, err := InitializeApp(ctx, cfg)
+	handler, err := BootstrapApp(ctx, cfg)
 	if err != nil {
-		log.Fatalf("initialize app: %v", err)
+		slog.Error("failed to bootstrap application", "error", err)
+		os.Exit(1)
 	}
 
 	srv := &http.Server{
@@ -37,19 +53,22 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("server listening on %s", srv.Addr)
+		slog.Info("server listening", "address", srv.Addr, "driver", cfg.Database.Driver)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server crash", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-quit
-	log.Println("shutting down...")
+	slog.Info("shutting down...")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("shutdown error: %v", err)
+		slog.Error("graceful shutdown failed", "error", err)
+		os.Exit(1)
 	}
+	slog.Info("application has been shut down safely.")
 }

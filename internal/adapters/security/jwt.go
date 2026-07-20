@@ -20,9 +20,13 @@ type JWTManager struct {
 	expiresIn time.Duration
 }
 
-func NewJWTManager(secret config.JWTSecret, issuer config.JWTIssuer, expiresIn config.JWTExpiresIn) *JWTManager {
+func NewJWTManager(cfg config.Config) *JWTManager {
+	secret := cfg.JWT.Secret
+	issuer := cfg.JWT.Issuer
+	expiresIn := cfg.JWT.ExpiresIn
+
 	if expiresIn <= 0 {
-		expiresIn = config.JWTExpiresIn(24 * time.Hour)
+		expiresIn = 24 * time.Hour
 	}
 	if issuer == "" {
 		issuer = "go-crud-db-p2"
@@ -30,8 +34,8 @@ func NewJWTManager(secret config.JWTSecret, issuer config.JWTIssuer, expiresIn c
 
 	return &JWTManager{
 		secret:    []byte(secret),
-		issuer:    string(issuer),
-		expiresIn: time.Duration(expiresIn),
+		issuer:    issuer,
+		expiresIn: expiresIn,
 	}
 }
 

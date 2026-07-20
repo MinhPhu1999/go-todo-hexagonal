@@ -8,10 +8,12 @@ import (
 )
 
 func TestGoogleOAuthAuthCodeURLPromptsAccountSelection(t *testing.T) {
-	googleOAuth := NewGoogleOAuth(config.GoogleConfig{
-		ClientID:     "client-id",
-		ClientSecret: "client-secret",
-		RedirectURL:  "http://localhost:8080/api/v1/auth/google/callback",
+	googleOAuth := NewGoogleOAuth(config.Config{
+		Google: config.GoogleConfig{
+			ClientID:     "client-id",
+			ClientSecret: "client-secret",
+			RedirectURL:  "http://localhost:8080/api/v1/auth/google/callback",
+		},
 	})
 
 	loginURL, err := googleOAuth.AuthCodeURL("test-state")

@@ -36,6 +36,7 @@ func (id TodoID) String() string {
 
 type Todo struct {
 	ID          TodoID     `json:"id"`
+	UserID      UserID     `json:"user_id"`
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Completed   bool       `json:"completed"`
@@ -44,9 +45,12 @@ type Todo struct {
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 }
 
-func NewTodo(id TodoID, title string, description string, now time.Time) (*Todo, error) {
+func NewTodo(id TodoID, userID UserID, title string, description string, now time.Time) (*Todo, error) {
 	if id == "" {
 		return nil, fmt.Errorf("%w: id is required", ErrInvalidTodo)
+	}
+	if userID == "" {
+		return nil, fmt.Errorf("%w: user id is required", ErrInvalidTodo)
 	}
 
 	title, err := normalizeTitle(title)
@@ -62,6 +66,7 @@ func NewTodo(id TodoID, title string, description string, now time.Time) (*Todo,
 	now = now.UTC()
 	return &Todo{
 		ID:          id,
+		UserID:      userID,
 		Title:       title,
 		Description: description,
 		CreatedAt:   now,
@@ -71,6 +76,7 @@ func NewTodo(id TodoID, title string, description string, now time.Time) (*Todo,
 
 func RehydrateTodo(
 	id TodoID,
+	userID UserID,
 	title string,
 	description string,
 	completed bool,
@@ -98,6 +104,7 @@ func RehydrateTodo(
 
 	return &Todo{
 		ID:          id,
+		UserID:      userID,
 		Title:       title,
 		Description: description,
 		Completed:   completed,
@@ -157,6 +164,7 @@ func (todo *Todo) Update(title *string, description *string, completed *bool, no
 type CreateTodoRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	UserID      UserID `json:"-"`
 }
 
 type UpdateTodoRequest struct {
@@ -170,6 +178,7 @@ type FetchTodosRequest struct {
 	PageNumber int
 	Completed  *bool
 	Search     string
+	UserID     UserID
 }
 
 func (request FetchTodosRequest) Normalize() (FetchTodosRequest, error) {

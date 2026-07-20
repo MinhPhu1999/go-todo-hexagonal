@@ -10,8 +10,8 @@ import (
 type ITodoRepository interface {
 	Save(ctx context.Context, todo *domain.Todo) error
 	Fetch(ctx context.Context, request domain.FetchTodosRequest) (*domain.TodoList, error)
-	GetByID(ctx context.Context, id domain.TodoID) (*domain.Todo, error)
-	Delete(ctx context.Context, id domain.TodoID) error
+	GetByID(ctx context.Context, id domain.TodoID, userID domain.UserID) (*domain.Todo, error)
+	Delete(ctx context.Context, id domain.TodoID, userID domain.UserID) error
 }
 
 type IUserRepository interface {

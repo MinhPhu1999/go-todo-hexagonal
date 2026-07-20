@@ -9,11 +9,13 @@ import (
 )
 
 func TestJWTManagerIssueAndVerifyToken(t *testing.T) {
-	manager := NewJWTManager(
-		config.JWTSecret("test-secret-with-enough-length"),
-		config.JWTIssuer("go-crud-db-p2-test"),
-		config.JWTExpiresIn(time.Hour),
-	)
+	manager := NewJWTManager(config.Config{
+		JWT: config.JWTConfig{
+			Secret:    "test-secret-with-enough-length",
+			Issuer:    "go-crud-db-p2-test",
+			ExpiresIn: time.Hour,
+		},
+	})
 
 	user := &domain.User{
 		ID:    domain.UserID("665000000000000000000201"),

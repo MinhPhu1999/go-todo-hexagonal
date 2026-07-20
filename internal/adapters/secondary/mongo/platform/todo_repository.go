@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"time"
 
-	"go-crud-db-p2/config"
 	domain "go-crud-db-p2/internal/core/domain/platform"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -19,9 +18,9 @@ type TodoRepository struct {
 	collection *mongo.Collection
 }
 
-func NewTodoRepository(database *mongo.Database, collection config.TodoCollectionName) *TodoRepository {
+func NewTodoRepository(database *mongo.Database) *TodoRepository {
 	return &TodoRepository{
-		collection: database.Collection(string(collection)),
+		collection: database.Collection("todos"),
 	}
 }
 
@@ -41,7 +40,9 @@ func (repository *TodoRepository) Save(ctx context.Context, todo *domain.Todo) e
 }
 
 func (repository *TodoRepository) Fetch(ctx context.Context, request domain.FetchTodosRequest) (*domain.TodoList, error) {
-	filter := bson.D{}
+	filter := bson.D{
+		{Key: "user_id", Value: request.UserID.String()},
+	}
 	if request.Completed != nil {
 		filter = append(filter, bson.E{Key: "completed", Value: *request.Completed})
 	}
@@ -99,14 +100,14 @@ func (repository *TodoRepository) Fetch(ctx context.Context, request domain.Fetc
 	}, nil
 }
 
-func (repository *TodoRepository) GetByID(ctx context.Context, id domain.TodoID) (*domain.Todo, error) {
+func (repository *TodoRepository) GetByID(ctx context.Context, id domain.TodoID, userID domain.UserID) (*domain.Todo, error) {
 	objectID, err := objectIDFromTodoID(id)
 	if err != nil {
 		return nil, err
 	}
 
 	var document todoDocument
-	err = repository.collection.FindOne(ctx, bson.M{"_id": objectID}).Decode(&document)
+	err = repository.collection.FindOne(ctx, bson.M{"_id": objectID, "user_id": userID.String()}).Decode(&document)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, domain.ErrTodoNotFound
 	}
@@ -117,13 +118,13 @@ func (repository *TodoRepository) GetByID(ctx context.Context, id domain.TodoID)
 	return document.toDomain()
 }
 
-func (repository *TodoRepository) Delete(ctx context.Context, id domain.TodoID) error {
+func (repository *TodoRepository) Delete(ctx context.Context, id domain.TodoID, userID domain.UserID) error {
 	objectID, err := objectIDFromTodoID(id)
 	if err != nil {
 		return err
 	}
 
-	result, err := repository.collection.DeleteOne(ctx, bson.M{"_id": objectID})
+	result, err := repository.collection.DeleteOne(ctx, bson.M{"_id": objectID, "user_id": userID.String()})
 	if err != nil {
 		return err
 	}
@@ -136,6 +137,7 @@ func (repository *TodoRepository) Delete(ctx context.Context, id domain.TodoID) 
 
 type todoDocument struct {
 	ID          bson.ObjectID `bson:"_id"`
+	UserID      string        `bson:"user_id"`
 	Title       string        `bson:"title"`
 	Description string        `bson:"description"`
 	Completed   bool          `bson:"completed"`
@@ -156,6 +158,7 @@ func newTodoDocument(todo *domain.Todo) (todoDocument, error) {
 
 	return todoDocument{
 		ID:          objectID,
+		UserID:      todo.UserID.String(),
 		Title:       todo.Title,
 		Description: todo.Description,
 		Completed:   todo.Completed,
@@ -168,6 +171,7 @@ func newTodoDocument(todo *domain.Todo) (todoDocument, error) {
 func (document todoDocument) toDomain() (*domain.Todo, error) {
 	return domain.RehydrateTodo(
 		domain.TodoID(document.ID.Hex()),
+		domain.UserID(document.UserID),
 		document.Title,
 		document.Description,
 		document.Completed,

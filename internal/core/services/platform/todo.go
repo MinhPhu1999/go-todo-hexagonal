@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"go-crud-db-p2/config"
 	domain "go-crud-db-p2/internal/core/domain/platform"
 	ports "go-crud-db-p2/internal/core/ports/platform"
 )
@@ -18,13 +19,13 @@ type TodoService struct {
 
 func NewTodoService(
 	todoRepository ports.ITodoRepository,
-	timeout time.Duration,
+	cfg config.Config,
 	idGenerator ports.ITodoIDGenerator,
 	clock ports.IClock,
 ) *TodoService {
 	return &TodoService{
 		todoRepository: todoRepository,
-		contextTimeout: timeout,
+		contextTimeout: cfg.Context.Timeout,
 		idGenerator:    idGenerator,
 		clock:          clock,
 	}
@@ -34,7 +35,7 @@ func (s *TodoService) Create(ctx context.Context, request domain.CreateTodoReque
 	ctx, cancel := s.context(ctx)
 	defer cancel()
 
-	todo, err := domain.NewTodo(s.idGenerator.NewID(), request.Title, request.Description, s.clock.Now())
+	todo, err := domain.NewTodo(s.idGenerator.NewID(), request.UserID, request.Title, request.Description, s.clock.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func (s *TodoService) Fetch(ctx context.Context, request domain.FetchTodosReques
 	return s.todoRepository.Fetch(ctx, request)
 }
 
-func (s *TodoService) GetByID(ctx context.Context, id string) (*domain.Todo, error) {
+func (s *TodoService) GetByID(ctx context.Context, id string, userID domain.UserID) (*domain.Todo, error) {
 	ctx, cancel := s.context(ctx)
 	defer cancel()
 
@@ -67,10 +68,10 @@ func (s *TodoService) GetByID(ctx context.Context, id string) (*domain.Todo, err
 		return nil, err
 	}
 
-	return s.todoRepository.GetByID(ctx, todoID)
+	return s.todoRepository.GetByID(ctx, todoID, userID)
 }
 
-func (s *TodoService) Update(ctx context.Context, id string, request domain.UpdateTodoRequest) (*domain.Todo, error) {
+func (s *TodoService) Update(ctx context.Context, id string, request domain.UpdateTodoRequest, userID domain.UserID) (*domain.Todo, error) {
 	if request.Title == nil && request.Description == nil && request.Completed == nil {
 		return nil, fmt.Errorf("%w: at least one field is required", domain.ErrInvalidTodo)
 	}
@@ -83,7 +84,7 @@ func (s *TodoService) Update(ctx context.Context, id string, request domain.Upda
 		return nil, err
 	}
 
-	todo, err := s.todoRepository.GetByID(ctx, todoID)
+	todo, err := s.todoRepository.GetByID(ctx, todoID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (s *TodoService) Update(ctx context.Context, id string, request domain.Upda
 	return todo, nil
 }
 
-func (s *TodoService) Delete(ctx context.Context, id string) error {
+func (s *TodoService) Delete(ctx context.Context, id string, userID domain.UserID) error {
 	ctx, cancel := s.context(ctx)
 	defer cancel()
 
@@ -108,7 +109,7 @@ func (s *TodoService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 
-	return s.todoRepository.Delete(ctx, todoID)
+	return s.todoRepository.Delete(ctx, todoID, userID)
 }
 
 func (s *TodoService) context(parent context.Context) (context.Context, context.CancelFunc) {
