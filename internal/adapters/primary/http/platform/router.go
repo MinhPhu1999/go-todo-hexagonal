@@ -51,6 +51,8 @@ func (h *PlatformHandler) Engine() *gin.Engine {
 func (h *PlatformHandler) RegisterRoutes(router *gin.RouterGroup) *gin.RouterGroup {
 	router.POST("/auth/register", h.Register)
 	router.POST("/auth/login", h.Login)
+	router.POST("/auth/forgot-password", h.ForgotPassword)
+	router.POST("/auth/reset-password", h.ResetPassword)
 	router.GET("/auth/google/url", h.GoogleLoginURL)
 	router.GET("/auth/google/login", h.GoogleLogin)
 	router.GET("/auth/google/callback", h.GoogleCallback)
@@ -58,6 +60,8 @@ func (h *PlatformHandler) RegisterRoutes(router *gin.RouterGroup) *gin.RouterGro
 	authGroup := router.Group("/")
 	authGroup.Use(h.jwtMiddleware())
 	authGroup.GET("/auth/me", h.Me)
+	authGroup.PATCH("/auth/me", h.UpdateProfile)
+	authGroup.POST("/auth/change-password", h.ChangePassword)
 
 	authGroup.POST("/todos", h.CreateTodo)
 	authGroup.GET("/todos", h.FetchTodos)

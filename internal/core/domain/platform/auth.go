@@ -16,6 +16,10 @@ var (
 	ErrGoogleEmailNotVerified   = errors.New("google email is not verified")
 	ErrGoogleInvalidOAuthState  = errors.New("invalid google oauth state")
 	ErrGoogleProfileUnavailable = errors.New("google profile unavailable")
+	ErrAccountLocked            = errors.New("account is locked")
+	ErrInvalidOTP               = errors.New("invalid otp")
+	ErrOTPExpired               = errors.New("otp has expired")
+	ErrInvalidPassword          = errors.New("invalid password")
 )
 
 type UserID string
@@ -33,16 +37,19 @@ func (id UserID) String() string {
 }
 
 type User struct {
-	ID           UserID     `json:"id"`
-	Email        string     `json:"email"`
-	Name         string     `json:"name"`
-	Picture      string     `json:"picture,omitempty"`
-	PasswordHash string     `json:"-"`
-	GoogleID     string     `json:"-"`
-	Providers    []string   `json:"providers"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+	ID                 UserID     `json:"id"`
+	Email              string     `json:"email"`
+	Name               string     `json:"name"`
+	Picture            string     `json:"picture,omitempty"`
+	PasswordHash       string     `json:"-"`
+	GoogleID           string     `json:"-"`
+	Providers          []string   `json:"providers"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	LastLoginAt        *time.Time `json:"last_login_at,omitempty"`
+	AccountLockedUntil *time.Time `json:"-"`
+	ResetOTPHash       string     `json:"-"`
+	ResetOTPExpiresAt  *time.Time `json:"-"`
 }
 
 func NewEmailUser(id UserID, email string, name string, passwordHash string, now time.Time) (*User, error) {
@@ -106,6 +113,9 @@ func RehydrateUser(
 	createdAt time.Time,
 	updatedAt time.Time,
 	lastLoginAt *time.Time,
+	accountLockedUntil *time.Time,
+	resetOTPHash string,
+	resetOTPExpiresAt *time.Time,
 ) (*User, error) {
 	if id == "" {
 		return nil, fmt.Errorf("%w: user id is required", ErrInvalidAuthRequest)
@@ -116,16 +126,19 @@ func RehydrateUser(
 	}
 
 	return &User{
-		ID:           id,
-		Email:        email,
-		Name:         normalizeName(name, email),
-		Picture:      strings.TrimSpace(picture),
-		PasswordHash: passwordHash,
-		GoogleID:     strings.TrimSpace(googleID),
-		Providers:    normalizeProviders(providers),
-		CreatedAt:    createdAt.UTC(),
-		UpdatedAt:    updatedAt.UTC(),
-		LastLoginAt:  utcTimePointer(lastLoginAt),
+		ID:                 id,
+		Email:              email,
+		Name:               normalizeName(name, email),
+		Picture:            strings.TrimSpace(picture),
+		PasswordHash:       passwordHash,
+		GoogleID:           strings.TrimSpace(googleID),
+		Providers:          normalizeProviders(providers),
+		CreatedAt:          createdAt.UTC(),
+		UpdatedAt:          updatedAt.UTC(),
+		LastLoginAt:        utcTimePointer(lastLoginAt),
+		AccountLockedUntil: utcTimePointer(accountLockedUntil),
+		ResetOTPHash:       resetOTPHash,
+		ResetOTPExpiresAt:  utcTimePointer(resetOTPExpiresAt),
 	}, nil
 }
 
@@ -159,6 +172,25 @@ func (user *User) MarkLoggedIn(now time.Time) {
 	user.UpdatedAt = loginAt
 }
 
+func (user *User) RequestPasswordReset(otpHash string, otpExpiresAt time.Time, now time.Time) {
+	user.ResetOTPHash = otpHash
+	user.ResetOTPExpiresAt = &otpExpiresAt
+	user.AccountLockedUntil = &otpExpiresAt
+	user.UpdatedAt = now.UTC()
+}
+
+func (user *User) ResetPassword(passwordHash string, now time.Time) {
+	user.PasswordHash = passwordHash
+	user.ResetOTPHash = ""
+	user.ResetOTPExpiresAt = nil
+	user.AccountLockedUntil = nil
+	user.UpdatedAt = now.UTC()
+}
+
+func (user *User) IsAccountLocked(now time.Time) bool {
+	return user.AccountLockedUntil != nil && now.Before(*user.AccountLockedUntil)
+}
+
 func (user *User) addProvider(provider string) {
 	provider = strings.TrimSpace(provider)
 	if provider == "" {
@@ -181,6 +213,43 @@ type RegisterRequest struct {
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email"`
+	OTP         string `json:"otp"`
+	NewPassword string `json:"new_password"`
+}
+
+type UpdateProfileRequest struct {
+	Name    *string `json:"name"`
+	Picture *string `json:"picture"`
+}
+
+func (request UpdateProfileRequest) Validate() error {
+	if request.Name == nil && request.Picture == nil {
+		return fmt.Errorf("%w: at least one field (name, picture) must be provided", ErrInvalidAuthRequest)
+	}
+	return nil
+}
+
+func (user *User) UpdateProfile(request UpdateProfileRequest, now time.Time) {
+	if request.Name != nil {
+		user.Name = normalizeName(*request.Name, user.Email)
+	}
+	if request.Picture != nil {
+		user.Picture = strings.TrimSpace(*request.Picture)
+	}
+	user.UpdatedAt = now.UTC()
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 type AuthResponse struct {

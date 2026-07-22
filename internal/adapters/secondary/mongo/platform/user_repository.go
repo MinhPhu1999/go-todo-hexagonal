@@ -78,16 +78,19 @@ func (repository *UserRepository) findOne(ctx context.Context, filter bson.M) (*
 }
 
 type userDocument struct {
-	ID           bson.ObjectID `bson:"_id"`
-	Email        string        `bson:"email"`
-	Name         string        `bson:"name"`
-	Picture      string        `bson:"picture,omitempty"`
-	PasswordHash string        `bson:"password_hash,omitempty"`
-	GoogleID     string        `bson:"google_id,omitempty"`
-	Providers    []string      `bson:"providers"`
-	CreatedAt    time.Time     `bson:"created_at"`
-	UpdatedAt    time.Time     `bson:"updated_at"`
-	LastLoginAt  *time.Time    `bson:"last_login_at,omitempty"`
+	ID                 bson.ObjectID `bson:"_id"`
+	Email              string        `bson:"email"`
+	Name               string        `bson:"name"`
+	Picture            string        `bson:"picture,omitempty"`
+	PasswordHash       string        `bson:"password_hash,omitempty"`
+	GoogleID           string        `bson:"google_id,omitempty"`
+	Providers          []string      `bson:"providers"`
+	CreatedAt          time.Time     `bson:"created_at"`
+	UpdatedAt          time.Time     `bson:"updated_at"`
+	LastLoginAt        *time.Time    `bson:"last_login_at,omitempty"`
+	AccountLockedUntil *time.Time    `bson:"account_locked_until,omitempty"`
+	ResetOTPHash       string        `bson:"reset_otp_hash,omitempty"`
+	ResetOTPExpiresAt  *time.Time    `bson:"reset_otp_expires_at,omitempty"`
 }
 
 func newUserDocument(user *domain.User) (userDocument, error) {
@@ -101,16 +104,19 @@ func newUserDocument(user *domain.User) (userDocument, error) {
 	}
 
 	return userDocument{
-		ID:           objectID,
-		Email:        user.Email,
-		Name:         user.Name,
-		Picture:      user.Picture,
-		PasswordHash: user.PasswordHash,
-		GoogleID:     user.GoogleID,
-		Providers:    user.Providers,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
-		LastLoginAt:  user.LastLoginAt,
+		ID:                 objectID,
+		Email:              user.Email,
+		Name:               user.Name,
+		Picture:            user.Picture,
+		PasswordHash:       user.PasswordHash,
+		GoogleID:           user.GoogleID,
+		Providers:          user.Providers,
+		CreatedAt:          user.CreatedAt,
+		UpdatedAt:          user.UpdatedAt,
+		LastLoginAt:        user.LastLoginAt,
+		AccountLockedUntil: user.AccountLockedUntil,
+		ResetOTPHash:       user.ResetOTPHash,
+		ResetOTPExpiresAt:  user.ResetOTPExpiresAt,
 	}, nil
 }
 
@@ -126,6 +132,9 @@ func (document userDocument) toDomain() (*domain.User, error) {
 		document.CreatedAt,
 		document.UpdatedAt,
 		document.LastLoginAt,
+		document.AccountLockedUntil,
+		document.ResetOTPHash,
+		document.ResetOTPExpiresAt,
 	)
 }
 

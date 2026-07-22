@@ -1,6 +1,6 @@
 # TO-DO List API P2
 
-MongoDB-backed TO-DO List API with email/password auth, Google OAuth sign-in, protected todo CRUD, Swagger docs, structured logging, and a hexagonal folder flow aligned with `platform-management-service`.
+MongoDB/Postgres-backed TO-DO List API with email/password auth, Google OAuth sign-in, password reset via email OTP, protected todo CRUD, Swagger docs, structured logging, and a hexagonal folder flow.
 
 ## Project Layout
 
@@ -13,8 +13,12 @@ internal/core/ports/platform       # Repository/provider/service contracts
 internal/core/services/platform    # Business logic
 internal/adapters/primary/http/platform
                                    # Gin handler, route registration, Swagger
+internal/adapters/secondary/email/platform
+                                   # Console/SMTP email sender adapters
 internal/adapters/secondary/mongo/platform
                                    # MongoDB repositories and client
+internal/adapters/secondary/postgres/platform
+                                   # PostgreSQL repositories and client
 internal/adapters/security         # JWT, bcrypt, Google OAuth, OAuth state
 pkg/logger                         # slog + Gin request/recovery logging
 pkg/response                       # API response envelopes
@@ -63,9 +67,24 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URL=http://localhost:5173/auth/google/callback
 GOOGLE_STATE_TTL=10m
+
+EMAIL_FROM_ADDRESS=noreply@todoapp.com
+EMAIL_FROM_NAME=Todo App
+
+OTP_LENGTH=6
+OTP_EXPIRES_IN=10m
 ```
 
 `JWT_SECRET` must be at least 16 characters or register/login token issuing will fail.
+
+To enable real email delivery, also set these in `.env`:
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+```
+When `SMTP_HOST` is empty, OTPs are logged to the console (development mode).
 
 ## Run With Docker
 
@@ -151,6 +170,22 @@ curl -s 'http://localhost:8080/api/v1/todos?pageSize=10&pageNumber=1' \
   -H 'Authorization: Bearer <access_token>'
 ```
 
+Request a password reset OTP:
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/auth/forgot-password \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"demo@example.com"}'
+```
+
+Reset password with OTP:
+
+```bash
+curl -s -X POST http://localhost:8080/api/v1/auth/reset-password \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"demo@example.com","otp":"123456","new_password":"newSecurePass99"}'
+```
+
 ## Swagger
 
 Open:
@@ -175,6 +210,8 @@ GET    /swagger/openapi.json
 
 POST   /api/v1/auth/register
 POST   /api/v1/auth/login
+POST   /api/v1/auth/forgot-password
+POST   /api/v1/auth/reset-password
 GET    /api/v1/auth/google/url
 GET    /api/v1/auth/google/login
 GET    /api/v1/auth/google/callback
@@ -187,7 +224,7 @@ PATCH  /api/v1/todos/:id
 DELETE /api/v1/todos/:id
 ```
 
-Protected endpoints require:
+`POST /api/v1/auth/forgot-password` and `POST /api/v1/auth/reset-password` are public endpoints. All other `/api/v1/` endpoints except auth/register, auth/login, and Google OAuth require:
 
 ```text
 Authorization: Bearer <access_token>

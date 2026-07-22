@@ -24,6 +24,8 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt" json:"jwt"`
 	Google   GoogleConfig   `mapstructure:"google" json:"google"`
 	Log      LogConfig      `mapstructure:"log" json:"log"`
+	Email    EmailConfig    `mapstructure:"email" json:"email"`
+	OTP      OTPConfig      `mapstructure:"otp" json:"otp"`
 }
 
 
@@ -84,6 +86,20 @@ type LogConfig struct {
 	AddSource bool   `mapstructure:"add_source" json:"add_source"`
 }
 
+type EmailConfig struct {
+	SMTPHost     string `mapstructure:"smtp_host" json:"smtp_host"`
+	SMTPPort     int    `mapstructure:"smtp_port" json:"smtp_port"`
+	SMTPUser     string `mapstructure:"smtp_user" json:"smtp_user"`
+	SMTPPassword string `mapstructure:"smtp_password" json:"smtp_password"`
+	FromAddress  string `mapstructure:"from_address" json:"from_address"`
+	FromName     string `mapstructure:"from_name" json:"from_name"`
+}
+
+type OTPConfig struct {
+	Length    int           `mapstructure:"length" json:"length"`
+	ExpiresIn time.Duration `mapstructure:"expires_in" json:"expires_in"`
+}
+
 // envBinding maps a config key to its environment variable name.
 type envBinding struct {
 	key     string
@@ -123,6 +139,16 @@ var envBindings = []envBinding{
 	bind("log.level", "LOG_LEVEL"),
 	bind("log.to_stdout", "LOG_TO_STDOUT"),
 	bind("log.add_source", "LOG_ADD_SOURCE"),
+
+	bind("email.smtp_host", "SMTP_HOST"),
+	bind("email.smtp_port", "SMTP_PORT"),
+	bind("email.smtp_user", "SMTP_USER"),
+	bind("email.smtp_password", "SMTP_PASSWORD"),
+	bind("email.from_address", "EMAIL_FROM_ADDRESS"),
+	bind("email.from_name", "EMAIL_FROM_NAME"),
+
+	bind("otp.length", "OTP_LENGTH"),
+	bind("otp.expires_in", "OTP_EXPIRES_IN"),
 }
 
 func bind(key string, envVars ...string) envBinding {
@@ -227,6 +253,13 @@ func setDefaults() {
 	viper.SetDefault("log.file_path", "storage/logs/app.log")
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.to_stdout", true)
+
+	viper.SetDefault("email.smtp_host", "")
+	viper.SetDefault("email.smtp_port", 587)
+	viper.SetDefault("email.from_name", "Todo App")
+
+	viper.SetDefault("otp.length", 6)
+	viper.SetDefault("otp.expires_in", "10m")
 }
 
 // bindEnvKeys explicitly binds all config keys to environment variables.

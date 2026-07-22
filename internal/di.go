@@ -4,12 +4,12 @@ import (
 	"github.com/google/wire"
 
 	http "go-crud-db-p2/internal/adapters/primary/http/platform"
+	emailadapter "go-crud-db-p2/internal/adapters/secondary/email/platform"
+	mongoadapter "go-crud-db-p2/internal/adapters/secondary/mongo/platform"
 	postgresadapter "go-crud-db-p2/internal/adapters/secondary/postgres/platform"
 	security "go-crud-db-p2/internal/adapters/security"
 	ports "go-crud-db-p2/internal/core/ports/platform"
 	services "go-crud-db-p2/internal/core/services/platform"
-
-	mongoadapter "go-crud-db-p2/internal/adapters/secondary/mongo/platform"
 )
 
 var MongoRepoSet = wire.NewSet(
@@ -51,6 +51,8 @@ var ServiceSet = wire.NewSet(
 
 	security.NewMemoryStateStore,
 	wire.Bind(new(ports.IAuthStateStore), new(*security.MemoryStateStore)),
+
+	emailadapter.NewEmailSender,
 
 	services.NewAuthService,
 	wire.Bind(new(ports.IAuthService), new(*services.AuthService)),

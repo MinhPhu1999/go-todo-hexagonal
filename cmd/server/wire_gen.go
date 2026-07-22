@@ -12,8 +12,9 @@ import (
 	"go-crud-db-p2/config"
 	"go-crud-db-p2/internal"
 	"go-crud-db-p2/internal/adapters/primary/http/platform"
+	platform4 "go-crud-db-p2/internal/adapters/secondary/email/platform"
 	platform2 "go-crud-db-p2/internal/adapters/secondary/mongo/platform"
-	platform4 "go-crud-db-p2/internal/adapters/secondary/postgres/platform"
+	platform5 "go-crud-db-p2/internal/adapters/secondary/postgres/platform"
 	"go-crud-db-p2/internal/adapters/security"
 	platform3 "go-crud-db-p2/internal/core/services/platform"
 )
@@ -34,7 +35,8 @@ func InitializeMongoApp(ctx context.Context, cfg config.Config) (*platform.Platf
 	googleOAuth := security.NewGoogleOAuth(cfg)
 	memoryStateStore := security.NewMemoryStateStore(cfg)
 	systemClock := platform3.NewSystemClock()
-	authService := platform3.NewAuthService(userRepository, cfg, objectIDGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock)
+	iEmailSender := platform4.NewEmailSender(cfg)
+	authService := platform3.NewAuthService(userRepository, cfg, objectIDGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock, iEmailSender)
 	todoRepository := platform2.NewTodoRepository(database)
 	todoService := platform3.NewTodoService(todoRepository, cfg, objectIDGenerator, systemClock)
 	platformHandler := platform.NewPlatformHandler(routerGroup, engine, authService, todoService, jwtManager)
@@ -48,15 +50,16 @@ func InitializePostgresApp(ctx context.Context, cfg config.Config) (*platform.Pl
 	if err != nil {
 		return nil, err
 	}
-	userRepository := platform4.NewUserRepository(pool)
-	uuidGenerator := platform4.NewUUIDGenerator()
+	userRepository := platform5.NewUserRepository(pool)
+	uuidGenerator := platform5.NewUUIDGenerator()
 	bcryptPasswordHasher := security.NewBcryptPasswordHasher()
 	jwtManager := security.NewJWTManager(cfg)
 	googleOAuth := security.NewGoogleOAuth(cfg)
 	memoryStateStore := security.NewMemoryStateStore(cfg)
 	systemClock := platform3.NewSystemClock()
-	authService := platform3.NewAuthService(userRepository, cfg, uuidGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock)
-	todoRepository := platform4.NewTodoRepository(pool)
+	iEmailSender := platform4.NewEmailSender(cfg)
+	authService := platform3.NewAuthService(userRepository, cfg, uuidGenerator, bcryptPasswordHasher, jwtManager, googleOAuth, memoryStateStore, systemClock, iEmailSender)
+	todoRepository := platform5.NewTodoRepository(pool)
 	todoService := platform3.NewTodoService(todoRepository, cfg, uuidGenerator, systemClock)
 	platformHandler := platform.NewPlatformHandler(routerGroup, engine, authService, todoService, jwtManager)
 	return platformHandler, nil
@@ -64,7 +67,6 @@ func InitializePostgresApp(ctx context.Context, cfg config.Config) (*platform.Pl
 
 // wire.go:
 
-// Tập hợp tầng giao tiếp và nghiệp vụ dùng chung
 var CoreAppSet = wire.NewSet(
 	provideGinEngine,
 	provideGinRouterGroup, internal.ServiceSet, internal.HandlerSet,

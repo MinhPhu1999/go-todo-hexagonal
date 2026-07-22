@@ -52,3 +52,7 @@ type IAuthStateStore interface {
 type IClock interface {
 	Now() time.Time
 }
+
+type IEmailSender interface {
+	SendOTP(to string, otp string) error
+}

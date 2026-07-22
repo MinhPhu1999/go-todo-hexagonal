@@ -20,4 +20,8 @@ type IAuthService interface {
 	GoogleLoginURL(ctx context.Context) (string, error)
 	GoogleCallback(ctx context.Context, state string, code string) (*domain.AuthResponse, error)
 	CurrentUser(ctx context.Context, id string) (*domain.User, error)
+	UpdateProfile(ctx context.Context, userID domain.UserID, request domain.UpdateProfileRequest) (*domain.User, error)
+	ChangePassword(ctx context.Context, userID domain.UserID, request domain.ChangePasswordRequest) error
+	ForgotPassword(ctx context.Context, request domain.ForgotPasswordRequest) error
+	ResetPassword(ctx context.Context, request domain.ResetPasswordRequest) error
 }

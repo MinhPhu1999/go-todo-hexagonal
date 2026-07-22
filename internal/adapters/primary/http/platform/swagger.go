@@ -4,8 +4,8 @@ const OpenAPIJSON = `{
   "openapi": "3.0.3",
   "info": {
     "title": "TO-DO List API",
-    "description": "MongoDB-backed TO-DO List API with email/password and Google sign-in.",
-    "version": "1.1.0"
+    "description": "MongoDB/Postgres-backed TO-DO List API with email/password and Google sign-in, password reset via email OTP.",
+    "version": "1.2.0"
   },
   "servers": [
     {
@@ -20,7 +20,7 @@ const OpenAPIJSON = `{
     },
     {
       "name": "Auth",
-      "description": "Registration, login, Google sign-in, and current user"
+      "description": "Registration, login, password reset, Google sign-in, and current user"
     },
     {
       "name": "Todos",
@@ -90,6 +90,69 @@ const OpenAPIJSON = `{
           "200": { "$ref": "#/components/responses/AuthSuccess" },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/AccountLocked" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Request password reset OTP",
+        "description": "Generates an OTP, locks the account (preventing login), and sends the OTP via email. Returns the same message whether the email exists or not to avoid user enumeration.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ForgotPasswordRequest" },
+              "example": { "email": "demo@example.com" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent (or email not found — message is identical)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "success": true, "message": "if the email exists, an otp has been sent" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Reset password with OTP",
+        "description": "Verifies the OTP and sets a new password. On success the account is unlocked.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResetPasswordRequest" },
+              "example": {
+                "email": "demo@example.com",
+                "otp": "123456",
+                "new_password": "newSecurePass99"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" },
+                "example": { "success": true, "message": "password has been reset" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
           "500": { "$ref": "#/components/responses/InternalServerError" }
         }
       }
@@ -376,6 +439,18 @@ const OpenAPIJSON = `{
           }
         }
       },
+      "AccountLocked": {
+        "description": "Account is locked due to password reset request",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": {
+              "success": false,
+              "error": { "code": "ACCOUNT_LOCKED", "message": "account is locked, reset password to unlock" }
+            }
+          }
+        }
+      },
       "GoogleUnavailable": {
         "description": "Google sign-in not configured",
         "content": {
@@ -429,6 +504,22 @@ const OpenAPIJSON = `{
         "properties": {
           "email": { "type": "string", "format": "email", "example": "demo@example.com" },
           "password": { "type": "string", "example": "password123" }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "demo@example.com" }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": ["email", "otp", "new_password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "demo@example.com" },
+          "otp": { "type": "string", "minLength": 6, "maxLength": 6, "example": "123456" },
+          "new_password": { "type": "string", "minLength": 8, "maxLength": 72, "example": "newSecurePass99" }
         }
       },
       "CreateTodoRequest": {
@@ -546,6 +637,13 @@ const OpenAPIJSON = `{
           "limit": { "type": "integer", "example": 10 },
           "total": { "type": "integer", "example": 5 },
           "total_pages": { "type": "integer", "example": 1 }
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string", "example": "password has been reset" }
         }
       },
       "DeletedResponse": {
